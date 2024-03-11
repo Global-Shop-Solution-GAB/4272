@@ -1,0 +1,98 @@
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+	F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	V.Local.sFromDir.Declare
+	V.Local.sToDir.Declare
+	V.Local.sCheckToDir.Declare
+	V.Local.bCheckToDir.Declare
+	V.Local.sMoveFrom.Declare
+	V.Local.sMoveTo.Declare
+	V.Local.sDir.Declare
+	V.Local.sDirYYYY.Declare
+	V.Local.sDir2.Declare
+	V.Local.iCnt.Declare(Long,0)
+	V.Local.iCnt0.Declare(Long,0)
+	V.Local.iCnt1.Declare(Long,0)
+	V.Local.iCnt2.Declare(Long,0)
+	V.Local.bLocked.Declare
+	V.Local.bExists.Declare
+	V.Local.iRet.Declare
+	
+	'Manually create the directories below
+	'FROM
+	'	\\mci2\departments\accounting\AP Information\
+	'	\\mci2\departments\accounting\AR Invoices\
+	'	\\mci2\departments\accounting\GL\
+	'TO
+	'	\\mci4\users\mcollins\AP Information\
+	'	\\mci4\users\mcollins\AR Invoices\
+	'	\\mci4\users\mcollins\GL\
+
+	'Set directories
+	F.Intrinsic.String.Split("\\mci2\departments\accounting\AP Information\*!*\\mci2\departments\accounting\AR Invoices\*!*\\mci2\departments\accounting\GL\","*!*",V.Local.sFromDir)
+	F.Intrinsic.String.Split("\\mci4\users\mcollins\AP Information\*!*\\mci4\users\mcollins\AR Invoices\*!*\\mci4\users\mcollins\GL\","*!*",V.Local.sToDir)
+'	F.Intrinsic.String.Split("C:\Global\1AP Inv\*!*C:\Global\1AR Inv\*!*C:\Global\1GL\","*!*",V.Local.sFromDir)
+'	F.Intrinsic.String.Split("C:\Global\A1\AP Inv\*!*C:\Global\A1\AR Inv\*!*C:\Global\A1\GL\","*!*",V.Local.sToDir)
+	
+	'Check To Directories
+	F.Intrinsic.Control.For(V.Local.iCnt,0,2,1)
+		F.Intrinsic.String.Build("{0}{1}\{2}",V.Local.sToDir(V.Local.iCnt),V.Ambient.Date.FormatYYYY,V.Ambient.Date.FormatMM,V.Local.sCheckToDir)
+		F.Intrinsic.File.DirExists(V.Local.sCheckToDir,V.Local.bCheckToDir)
+		F.Intrinsic.Control.If(V.Local.bCheckToDir,=,False)
+			F.Intrinsic.File.CreateDir(V.Local.sCheckToDir)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.Next(V.Local.iCnt)
+
+	'Move files
+	F.Intrinsic.Control.For(V.Local.iCnt0,0,2,1)
+		F.Intrinsic.File.GetFileList(V.Local.sFromDir(V.Local.iCnt0),16,V.Local.sDir)
+		F.Intrinsic.String.Split(V.Local.sDir,":",V.Local.sDir)
+		F.Intrinsic.Control.For(V.Local.iCnt1,0,V.Local.sDir.UBound,1)
+			F.Intrinsic.Control.If(V.Local.sDir(V.Local.iCnt1),=,V.Ambient.Date.FormatYYYY)
+				F.Intrinsic.String.Build("{0}{1}\{2}\*",V.Local.sFromDir(V.Local.iCnt0),V.Ambient.Date.FormatYYYY,V.Ambient.Date.FormatMM,V.Local.sDirYYYY)
+				F.Intrinsic.File.GetFileList(V.Local.sDirYYYY,1,V.Local.sDir2)
+				F.Intrinsic.String.Split(V.Local.sDir2,":",V.Local.sDir2)
+				F.Intrinsic.Control.If(V.Local.sDir2.UBound,=,0)
+					F.Intrinsic.Control.AndIf(V.Local.sDir2(0),=,"")
+						F.Intrinsic.Control.Next(V.Local.iCnt1)
+				F.Intrinsic.Control.Else
+					F.Intrinsic.Control.For(V.Local.iCnt2,0,V.Local.sDir2.UBound,1)
+						F.Intrinsic.String.Replace(V.Local.sDirYYYY,"\*","",V.Local.sDirYYYY)
+						F.Intrinsic.String.Build("{0}{1}\{2}",V.Local.sToDir(V.Local.iCnt0),V.Ambient.Date.FormatYYYY,V.Ambient.Date.FormatMM,V.Local.sMoveTo)
+						F.Intrinsic.String.Build("{0}\{1}",V.Local.sDirYYYY,V.Local.sDir2(V.Local.iCnt2),V.Local.sMoveFrom)
+						F.Intrinsic.File.IsFileLocked(V.Local.sMoveFrom,V.Local.bLocked)
+						F.Intrinsic.Control.If(V.Local.bLocked,=,False)
+							F.Intrinsic.String.Build("{0}\{1}",V.Local.sMoveTo,V.Local.sDir2(V.Local.iCnt2),V.Local.sMoveTo)
+							F.Intrinsic.File.Exists(V.Local.sMoveTo,V.Local.bExists)
+							F.Intrinsic.Control.If(V.Local.bExists)
+								F.Intrinsic.String.Build("{0}{1}\{2}",V.Local.sToDir(V.Local.iCnt0),V.Ambient.Date.FormatYYYY,V.Ambient.Date.FormatMM,V.Local.sMoveTo)
+								F.Intrinsic.String.Build("{0}\dup{2}_{1}",V.Local.sMoveTo,V.Local.sDir2(V.Local.iCnt2),V.Ambient.Time.FormatHHMMSS,V.Local.sMoveTo)
+								F.Intrinsic.File.MoveFile(V.Local.sMoveFrom,V.Local.sMoveTo,V.Local.iRet)
+							F.Intrinsic.Control.Else
+								F.Intrinsic.File.MoveFile(V.Local.sMoveFrom,V.Local.sMoveTo,V.Local.iRet)
+							F.Intrinsic.Control.EndIf
+						F.Intrinsic.Control.EndIf
+					F.Intrinsic.Control.Next(V.Local.iCnt2)
+				F.Intrinsic.Control.EndIf
+			F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.Next(V.Local.iCnt1)
+	F.Intrinsic.Control.Next(V.Local.iCnt0)
+	
+'	F.Intrinsic.UI.Msgbox("Complete")
+
+	F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: GAB_4272_Move_Acct_Files.g2u{0}{0}Subroutine: {1}{0}Error Occurred {2} with description {3}.",V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+	F.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Comments.Start
+${$0$}$GAB_4272_Move_Acct_Files$}$AGV$}$11/03/2016 1:04:05 PM$}$False
+${$3$}$0$}$$}$0$}$-1$}$$}$12:00:00 AM$}$Program was created to move auto created reports from one server location to another server location for security purposes. Direct paths are set in the script and this is specific for this customer only.
+Program.Sub.Comments.End
